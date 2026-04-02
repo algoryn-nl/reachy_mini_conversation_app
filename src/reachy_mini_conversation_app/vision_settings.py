@@ -64,13 +64,15 @@ def mount_vision_routes(
     # ------------------------------------------------------------------
     @app.get("/vision/status")  # type: ignore[misc]
     def _vision_status() -> dict:  # type: ignore
-        return JSONResponse({  # type: ignore
-            "head_tracker": _get_head_tracker_name(camera_worker),
-            "local_vision": deps.vision_processor is not None,
-            "local_vision_initializing": _vision_initializing,
-            "local_vision_error": _vision_init_error,
-            "camera_enabled": camera_worker is not None,
-        })
+        return JSONResponse(
+            {  # type: ignore
+                "head_tracker": _get_head_tracker_name(camera_worker),
+                "local_vision": deps.vision_processor is not None,
+                "local_vision_initializing": _vision_initializing,
+                "local_vision_error": _vision_init_error,
+                "camera_enabled": camera_worker is not None,
+            }
+        )
 
     # ------------------------------------------------------------------
     # POST /vision/head-tracker
@@ -81,7 +83,11 @@ def mount_vision_routes(
 
         if camera_worker is None:
             return JSONResponse(  # type: ignore
-                {"ok": False, "error": "camera_disabled", "detail": "Camera is not enabled. Start with camera support."},
+                {
+                    "ok": False,
+                    "error": "camera_disabled",
+                    "detail": "Camera is not enabled. Start with camera support.",
+                },
                 status_code=400,
             )
 
