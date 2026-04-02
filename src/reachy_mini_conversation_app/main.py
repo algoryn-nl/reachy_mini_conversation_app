@@ -183,6 +183,8 @@ def run(
             robot,
             settings_app=settings_app,
             instance_path=instance_path,
+            deps=deps,
+            camera_worker=camera_worker,
         )
 
     # Each async service → its own thread/loop

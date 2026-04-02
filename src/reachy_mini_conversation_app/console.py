@@ -14,7 +14,7 @@ import sys
 import time
 import asyncio
 import logging
-from typing import List, Optional
+from typing import Any, List, Optional
 from pathlib import Path
 
 from fastrtc import AdditionalOutputs, audio_to_float32
@@ -25,6 +25,7 @@ from reachy_mini.media.media_manager import MediaBackend
 from reachy_mini_conversation_app.config import LOCKED_PROFILE, config
 from reachy_mini_conversation_app.openai_realtime import OpenaiRealtimeHandler
 from reachy_mini_conversation_app.headless_personality_ui import mount_personality_routes
+from reachy_mini_conversation_app.vision_settings import mount_vision_routes
 
 
 try:
@@ -54,11 +55,15 @@ class LocalStream:
         *,
         settings_app: Optional[FastAPI] = None,
         instance_path: Optional[str] = None,
+        deps: Optional[Any] = None,
+        camera_worker: Optional[Any] = None,
     ):
         """Initialize the stream with an OpenAI realtime handler and pipelines.
 
         - ``settings_app``: the Reachy Mini Apps FastAPI to attach settings endpoints.
         - ``instance_path``: directory where per-instance ``.env`` should be stored.
+        - ``deps``: ToolDependencies for runtime vision toggling.
+        - ``camera_worker``: CameraWorker for runtime head tracker switching.
         """
         self.handler = handler
         self._robot = robot
@@ -68,6 +73,8 @@ class LocalStream:
         self.handler._clear_queue = self.clear_audio_queue
         self._settings_app: Optional[FastAPI] = settings_app
         self._instance_path: Optional[str] = instance_path
+        self._deps = deps
+        self._camera_worker = camera_worker
         self._settings_initialized = False
         self._asyncio_loop = None
 
@@ -302,6 +309,13 @@ class LocalStream:
             except Exception as e:
                 logger.warning(f"API key validation failed: {e}")
                 return JSONResponse({"valid": False, "error": "validation_error"}, status_code=500)
+
+        # Mount vision settings routes (head tracker + local vision toggling)
+        if self._deps is not None:
+            try:
+                mount_vision_routes(self._settings_app, self._deps, self._camera_worker)
+            except Exception:
+                logger.debug("Failed to mount vision routes", exc_info=True)
 
         self._settings_initialized = True
 

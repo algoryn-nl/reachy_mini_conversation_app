@@ -163,6 +163,149 @@ async function applyPersonality(name, { persist = false } = {}) {
   return await resp.json();
 }
 
+// ---------- Vision API ----------
+async function getVisionStatus() {
+  try {
+    const url = new URL("/vision/status", window.location.origin);
+    url.searchParams.set("_", Date.now().toString());
+    const resp = await fetchWithTimeout(url, {}, 2000);
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+async function waitForVisionStatus(timeoutMs = 30000) {
+  const deadline = Date.now() + timeoutMs;
+  while (true) {
+    const vs = await getVisionStatus();
+    if (vs !== null) return vs;
+    if (Date.now() >= deadline) return null;
+    await sleep(2000);
+  }
+}
+
+async function setHeadTracker(tracker) {
+  const resp = await fetch("/vision/head-tracker", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tracker: tracker || null }),
+  });
+  return await resp.json();
+}
+
+async function setLocalVision(enabled) {
+  const resp = await fetch("/vision/local-vision", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enabled }),
+  });
+  return await resp.json();
+}
+
+async function initVisionPanel() {
+  const visionPanel = document.getElementById("vision-panel");
+  const trackerSelect = document.getElementById("head-tracker-select");
+  const applyTracker = document.getElementById("apply-tracker");
+  const trackerStatus = document.getElementById("tracker-status");
+  const localVisionToggle = document.getElementById("local-vision-toggle");
+  const localVisionLabel = document.getElementById("local-vision-label");
+  const visionStatus = document.getElementById("vision-status");
+
+  const vs = await waitForVisionStatus();
+  if (vs === null) return; // Vision endpoints not available
+
+  show(visionPanel, true);
+
+  trackerSelect.value = vs.head_tracker || "";
+  localVisionToggle.checked = vs.local_vision;
+  localVisionLabel.textContent = vs.local_vision ? "Enabled" : "Disabled";
+
+  if (!vs.camera_enabled) {
+    trackerStatus.textContent = "Camera is disabled. Head tracking unavailable.";
+    trackerStatus.className = "status warn";
+    trackerSelect.disabled = true;
+    applyTracker.disabled = true;
+  }
+
+  applyTracker.addEventListener("click", async () => {
+    trackerStatus.textContent = "Applying...";
+    trackerStatus.className = "status";
+    try {
+      const res = await setHeadTracker(trackerSelect.value);
+      if (res.ok) {
+        trackerStatus.textContent = res.head_tracker
+          ? `Switched to ${res.head_tracker}.`
+          : "Head tracking disabled.";
+        trackerStatus.className = "status ok";
+      } else {
+        const msg = typeof res.detail === "string" ? res.detail : res.error || "Failed.";
+        trackerStatus.textContent = msg;
+        trackerStatus.className = "status error";
+      }
+    } catch (e) {
+      trackerStatus.textContent = "Request failed.";
+      trackerStatus.className = "status error";
+    }
+  });
+
+  localVisionToggle.addEventListener("change", async () => {
+    const enabled = localVisionToggle.checked;
+    visionStatus.textContent = enabled ? "Enabling..." : "Disabling...";
+    visionStatus.className = "status";
+    localVisionLabel.textContent = enabled ? "Enabling..." : "Disabled";
+
+    try {
+      const res = await setLocalVision(enabled);
+      if (!res.ok) {
+        localVisionToggle.checked = false;
+        localVisionLabel.textContent = "Disabled";
+        const msg = typeof res.detail === "string" ? res.detail : res.error || "Failed.";
+        visionStatus.textContent = msg;
+        visionStatus.className = "status error";
+        return;
+      }
+
+      if (res.local_vision) {
+        localVisionLabel.textContent = "Enabled";
+        visionStatus.textContent = "Local vision enabled.";
+        visionStatus.className = "status ok";
+      } else if (res.initializing) {
+        localVisionLabel.textContent = "Initializing...";
+        visionStatus.textContent = "Downloading and loading model (this may take a few minutes)...";
+        visionStatus.className = "status";
+        const pollInterval = setInterval(async () => {
+          const status = await getVisionStatus();
+          if (status === null) return;
+          if (status.local_vision) {
+            clearInterval(pollInterval);
+            localVisionToggle.checked = true;
+            localVisionLabel.textContent = "Enabled";
+            visionStatus.textContent = "Local vision enabled.";
+            visionStatus.className = "status ok";
+          } else if (!status.local_vision_initializing) {
+            clearInterval(pollInterval);
+            localVisionToggle.checked = false;
+            localVisionLabel.textContent = "Disabled";
+            visionStatus.textContent = status.local_vision_error || "Initialization failed.";
+            visionStatus.className = "status error";
+          }
+        }, 2000);
+      } else if (!enabled) {
+        localVisionLabel.textContent = "Disabled";
+        visionStatus.textContent = "Local vision disabled.";
+        visionStatus.className = "status ok";
+      }
+    } catch (e) {
+      localVisionToggle.checked = false;
+      localVisionLabel.textContent = "Disabled";
+      visionStatus.textContent = "Request failed.";
+      visionStatus.className = "status error";
+    }
+  });
+}
+
 // Full list from https://developers.openai.com/api/docs/guides/text-to-speech/#voice-options
 // "marin" and "cedar" are recommended for gpt-realtime.
 const VOICE_FALLBACK = ["alloy", "ash", "ballad", "cedar", "coral", "echo", "marin", "sage", "shimmer", "verse"];
@@ -276,6 +419,9 @@ async function init() {
       statusEl.className = "status error";
     }
   });
+
+  // Start vision panel init in background (doesn't depend on API key)
+  initVisionPanel();
 
   if (!st.has_key) {
     statusEl.textContent = "";

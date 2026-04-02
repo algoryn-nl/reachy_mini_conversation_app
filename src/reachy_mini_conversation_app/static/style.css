@@ -398,6 +398,38 @@ button.ghost:hover { border-color: rgba(94, 240, 193, 0.4); }
   margin: 0; font-size: 13px; color: var(--text);
 }
 
+/* Vision settings */
+.vision-row {
+  grid-template-columns: 160px 1fr;
+}
+.vision-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.vision-controls select {
+  flex: 1;
+}
+.vision-controls button {
+  margin: 0;
+  flex-shrink: 0;
+}
+.toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+.toggle-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 @media (max-width: 760px) {
   .hero h1 { font-size: 26px; }
   .privacy-notice { padding: 10px 12px; }

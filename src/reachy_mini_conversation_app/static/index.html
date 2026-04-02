@@ -132,6 +132,53 @@
         </div>
         <p id="personality-status" class="status"></p>
       </div>
+
+      <div id="vision-panel" class="panel hidden">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Hardware</p>
+            <h2>Vision settings</h2>
+          </div>
+          <span id="vision-chip" class="chip">Live</span>
+        </div>
+        <p class="muted">Configure head tracking and local vision processing. Changes apply immediately.</p>
+
+        <div class="section">
+          <div class="section-heading">
+            <h3>Head tracking</h3>
+            <p class="muted small">Follow faces with the robot's head.</p>
+          </div>
+          <div class="row vision-row">
+            <label for="head-tracker-select">Backend</label>
+            <div class="vision-controls">
+              <select id="head-tracker-select">
+                <option value="">Disabled</option>
+                <option value="yolo">YOLO (face detection)</option>
+                <option value="mediapipe">MediaPipe (landmarks)</option>
+              </select>
+              <button id="apply-tracker" class="ghost">Apply</button>
+            </div>
+          </div>
+          <p id="tracker-status" class="status"></p>
+        </div>
+
+        <div class="section">
+          <div class="section-heading">
+            <h3>Local vision</h3>
+            <p class="muted small">Process images on-device with SmolVLM2.</p>
+          </div>
+          <div class="row vision-row">
+            <label for="local-vision-toggle">On-device inference</label>
+            <div class="vision-controls">
+              <label class="toggle-label">
+                <input type="checkbox" id="local-vision-toggle" />
+                <span id="local-vision-label">Disabled</span>
+              </label>
+            </div>
+          </div>
+          <p id="vision-status" class="status"></p>
+        </div>
+      </div>
     </div>
 
     <script src="/static/main.js"></script>
