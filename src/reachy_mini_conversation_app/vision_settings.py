@@ -8,8 +8,9 @@ import logging
 import threading
 from typing import Any, Optional
 
-from reachy_mini_conversation_app.tools.core_tools import ToolDependencies
 from reachy_mini_conversation_app.camera_worker import CameraWorker
+from reachy_mini_conversation_app.tools.core_tools import ToolDependencies
+
 
 logger = logging.getLogger(__name__)
 
@@ -61,9 +62,9 @@ def mount_vision_routes(
     # ------------------------------------------------------------------
     # GET /vision/status
     # ------------------------------------------------------------------
-    @app.get("/vision/status")
-    def _vision_status() -> JSONResponse:
-        return JSONResponse({
+    @app.get("/vision/status")  # type: ignore[misc]
+    def _vision_status() -> dict:  # type: ignore
+        return JSONResponse({  # type: ignore
             "head_tracker": _get_head_tracker_name(camera_worker),
             "local_vision": deps.vision_processor is not None,
             "local_vision_initializing": _vision_initializing,
@@ -74,12 +75,12 @@ def mount_vision_routes(
     # ------------------------------------------------------------------
     # POST /vision/head-tracker
     # ------------------------------------------------------------------
-    @app.post("/vision/head-tracker")
-    async def _set_head_tracker(request: Request) -> JSONResponse:
+    @app.post("/vision/head-tracker")  # type: ignore[misc]
+    async def _set_head_tracker(request: Request) -> dict:  # type: ignore
         global _active_head_tracker
 
         if camera_worker is None:
-            return JSONResponse(
+            return JSONResponse(  # type: ignore
                 {"ok": False, "error": "camera_disabled", "detail": "Camera is not enabled. Start with camera support."},
                 status_code=400,
             )
@@ -94,10 +95,10 @@ def mount_vision_routes(
             camera_worker.head_tracker = None
             _active_head_tracker = None
             logger.info("Head tracker disabled via settings UI")
-            return JSONResponse({"ok": True, "head_tracker": None})
+            return JSONResponse({"ok": True, "head_tracker": None})  # type: ignore
 
         if tracker_name not in ("yolo", "mediapipe"):
-            return JSONResponse(
+            return JSONResponse(  # type: ignore
                 {"ok": False, "error": "invalid_tracker", "detail": f"Unknown tracker: {tracker_name}"},
                 status_code=400,
             )
@@ -105,19 +106,21 @@ def mount_vision_routes(
         try:
             if tracker_name == "yolo":
                 from reachy_mini_conversation_app.vision.yolo_head_tracker import HeadTracker
+
                 new_tracker = HeadTracker()
             else:
                 from reachy_mini_toolbox.vision import HeadTracker  # type: ignore[no-redef]
+
                 new_tracker = HeadTracker()
 
             camera_worker.head_tracker = new_tracker
             _active_head_tracker = tracker_name
             logger.info("Head tracker switched to %s via settings UI", tracker_name)
-            return JSONResponse({"ok": True, "head_tracker": tracker_name})
+            return JSONResponse({"ok": True, "head_tracker": tracker_name})  # type: ignore
 
         except ImportError:
             extra = "yolo_vision" if tracker_name == "yolo" else "mediapipe_vision"
-            return JSONResponse(
+            return JSONResponse(  # type: ignore
                 {
                     "ok": False,
                     "error": "missing_dependency",
@@ -127,7 +130,7 @@ def mount_vision_routes(
             )
         except Exception as e:
             logger.exception("Failed to initialize %s head tracker", tracker_name)
-            return JSONResponse(
+            return JSONResponse(  # type: ignore
                 {"ok": False, "error": "init_failed", "detail": str(e)},
                 status_code=500,
             )
@@ -135,8 +138,8 @@ def mount_vision_routes(
     # ------------------------------------------------------------------
     # POST /vision/local-vision
     # ------------------------------------------------------------------
-    @app.post("/vision/local-vision")
-    async def _set_local_vision(request: Request) -> JSONResponse:
+    @app.post("/vision/local-vision")  # type: ignore[misc]
+    async def _set_local_vision(request: Request) -> dict:  # type: ignore
         global _cached_vision_processor, _vision_initializing, _vision_init_error
 
         try:
@@ -151,25 +154,26 @@ def mount_vision_routes(
                 _cached_vision_processor = deps.vision_processor
             deps.vision_processor = None
             logger.info("Local vision disabled via settings UI")
-            return JSONResponse({"ok": True, "local_vision": False})
+            return JSONResponse({"ok": True, "local_vision": False})  # type: ignore
 
         # Enable: use cached processor if available
         if _cached_vision_processor is not None:
             deps.vision_processor = _cached_vision_processor
             logger.info("Local vision re-enabled from cache via settings UI")
-            return JSONResponse({"ok": True, "local_vision": True})
+            return JSONResponse({"ok": True, "local_vision": True})  # type: ignore
 
         # Need to initialize — check if already in progress
         if _vision_initializing:
-            return JSONResponse({"ok": True, "local_vision": False, "initializing": True})
+            return JSONResponse({"ok": True, "local_vision": False, "initializing": True})  # type: ignore
 
         # Check that the extra is installed before spawning a thread
         try:
             import importlib
+
             importlib.import_module("torch")
             importlib.import_module("transformers")
         except ImportError:
-            return JSONResponse(
+            return JSONResponse(  # type: ignore
                 {
                     "ok": False,
                     "error": "missing_dependency",
@@ -186,6 +190,7 @@ def mount_vision_routes(
             global _cached_vision_processor, _vision_initializing, _vision_init_error
             try:
                 from reachy_mini_conversation_app.vision.processors import initialize_vision_processor
+
                 processor = initialize_vision_processor()
                 _cached_vision_processor = processor
                 deps.vision_processor = processor
@@ -199,4 +204,4 @@ def mount_vision_routes(
         thread = threading.Thread(target=_init_vision, daemon=True, name="vision-init")
         thread.start()
 
-        return JSONResponse({"ok": True, "local_vision": False, "initializing": True})
+        return JSONResponse({"ok": True, "local_vision": False, "initializing": True})  # type: ignore
