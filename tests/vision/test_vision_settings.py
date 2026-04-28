@@ -120,7 +120,7 @@ def test_set_head_tracker_init_failure(app_and_deps: tuple[Any, FakeDeps, Simple
     """Tracker initialization failures return a 500 error."""
     client, _, _ = app_and_deps
     with patch(
-        "reachy_mini_conversation_app.vision.yolo_head_tracker.HeadTracker",
+        "reachy_mini_conversation_app.vision.head_tracking.yolo_process.YoloHeadTrackerProcess",
         side_effect=RuntimeError("GPU init failed"),
     ):
         resp = client.post("/vision/head-tracker", json={"tracker": "yolo"})
@@ -208,7 +208,7 @@ def test_mount_seeds_tracker_name_from_yolo() -> None:
 
     deps = FakeDeps()
     tracker = MagicMock()
-    type(tracker).__module__ = "reachy_mini_conversation_app.vision.yolo_head_tracker"
+    type(tracker).__module__ = "reachy_mini_conversation_app.vision.head_tracking.yolo_process"
     cw = SimpleNamespace(head_tracker=tracker)
 
     app = FastAPI()
@@ -223,7 +223,7 @@ def test_mount_seeds_tracker_name_from_mediapipe() -> None:
 
     deps = FakeDeps()
     tracker = MagicMock()
-    type(tracker).__module__ = "reachy_mini_toolbox.vision"
+    type(tracker).__module__ = "reachy_mini_conversation_app.vision.head_tracking.mediapipe"
     cw = SimpleNamespace(head_tracker=tracker)
 
     app = FastAPI()

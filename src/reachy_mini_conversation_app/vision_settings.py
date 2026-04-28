@@ -111,13 +111,17 @@ def mount_vision_routes(
 
         try:
             if tracker_name == "yolo":
-                from reachy_mini_conversation_app.vision.yolo_head_tracker import HeadTracker
+                from reachy_mini_conversation_app.vision.head_tracking.yolo_process import (
+                    YoloHeadTrackerProcess,
+                )
 
-                new_tracker = HeadTracker()
+                new_tracker: Any = YoloHeadTrackerProcess()
             else:
-                from reachy_mini_toolbox.vision import HeadTracker  # type: ignore[no-redef]
+                from reachy_mini_conversation_app.vision.head_tracking.mediapipe import (
+                    MediapipeHeadTracker,
+                )
 
-                new_tracker = HeadTracker()
+                new_tracker = MediapipeHeadTracker()
 
             camera_worker.head_tracker = new_tracker
             _active_head_tracker = tracker_name
