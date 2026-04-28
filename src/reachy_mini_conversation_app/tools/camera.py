@@ -3,9 +3,8 @@ import asyncio
 import logging
 from typing import Any, Dict
 
-import cv2
-
 from reachy_mini_conversation_app.tools.core_tools import Tool, ToolDependencies
+from reachy_mini_conversation_app.camera_frame_encoding import encode_bgr_frame_as_jpeg
 
 
 logger = logging.getLogger(__name__)
@@ -47,7 +46,9 @@ class Camera(Tool):
 
         if deps.vision_processor is not None:
             vision_result = await asyncio.to_thread(
-                deps.vision_processor.process_image, frame, question,
+                deps.vision_processor.process_image,
+                frame,
+                question,
             )
             return (
                 {"image_description": vision_result}
@@ -55,10 +56,5 @@ class Camera(Tool):
                 else {"error": "vision returned non-string"}
             )
 
-        # Encode image directly to JPEG bytes without writing to file
-        success, buffer = cv2.imencode('.jpg', frame)
-        if not success:
-            raise RuntimeError("Failed to encode frame as JPEG")
-
-        b64_encoded = base64.b64encode(buffer.tobytes()).decode("utf-8")
-        return {"b64_im": b64_encoded}
+        jpeg_bytes = encode_bgr_frame_as_jpeg(frame)
+        return {"b64_im": base64.b64encode(jpeg_bytes).decode("utf-8")}
