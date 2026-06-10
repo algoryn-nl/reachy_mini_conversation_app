@@ -160,6 +160,7 @@ def run(
     deps = ToolDependencies(
         reachy_mini=robot,
         movement_manager=movement_manager,
+        instance_path=instance_path,
         camera_worker=camera_worker,
         vision_processor=vision_processor,
     )
